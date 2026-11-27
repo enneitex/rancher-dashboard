@@ -225,7 +225,21 @@ export type LocationConfig = {
    * entry of a map the component provides (eg. one of a resource's annotations).
    */
   context?: { [key: string]: any },
+  /**
+   * Apply only if the user has the schema of this type (the CRD is installed and the user may see it).
+   *
+   * A type id, a RegExp matched against the schema ids, or `{ type, store }` to look in a store other
+   * than the current product's. An array requires every entry.
+   */
+  ifHaveType?: LocationConfigType | LocationConfigType[],
+  /**
+   * Used with `ifHaveType`: apply only if every matching schema allows this verb (`GET`, `POST`, `PUT`, `DELETE`...)
+   */
+  ifHaveVerb?: string,
 };
+
+/** A type `LocationConfig.ifHaveType` requires */
+export type LocationConfigType = string | RegExp | { type: string | RegExp, store: string };
 
 /**
  * Environment metadata that extensions can access

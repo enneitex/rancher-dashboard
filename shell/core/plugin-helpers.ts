@@ -1,7 +1,10 @@
 import { RouteLocation } from 'vue-router';
 import { ComponentOptionsMixin } from 'vue';
 
-import { ActionLocation, CardLocation, ExtensionPoint } from '@shell/core/types';
+import {
+  ActionLocation, CardLocation, ExtensionPoint, LocationConfig, LocationConfigType
+} from '@shell/core/types';
+import { SCHEMA } from '@shell/config/types';
 import { isMac } from '@shell/utils/platform';
 import { ucFirst, randomStr } from '@shell/utils/string';
 import {
@@ -159,6 +162,72 @@ function checkExtensionRouteBinding($route: any, locationConfig: any, context: a
   return res;
 }
 
+/**
+ * The ids of the schemas a `LocationConfig.ifHaveType` entry matches, and the store they are in
+ */
+function schemasFor(getters: any, want: LocationConfigType): { store: string, ids: string[] } {
+  const isTypeAndStore = typeof want === 'object' && !(want instanceof RegExp);
+  const type = isTypeAndStore ? want.type : want;
+  const store = (isTypeAndStore ? want.store : undefined) || getters['currentStore']?.(typeof type === 'string' ? type : undefined);
+
+  if (!store) {
+    return { store, ids: [] };
+  }
+
+  if (typeof type === 'string') {
+    const schema = getters[`${ store }/schemaFor`]?.(type);
+
+    return { store, ids: schema ? [schema.id] : [] };
+  }
+
+  const ids = (getters[`${ store }/all`]?.(SCHEMA) || [])
+    .map((schema: { id: string }) => schema.id)
+    .filter((id: string) => type.test(id));
+
+  return { store, ids };
+}
+
+/**
+ * Does the schema allow this verb? Same rule as the type-map's `ifHaveVerb` for products and pages
+ */
+function schemaHasVerb(getters: any, store: string, id: string, verb: string): boolean {
+  const schema = getters[`${ store }/schemaFor`]?.(id);
+  const want = verb.toLowerCase();
+  const have = [...(schema?.collectionMethods || []), ...(schema?.resourceMethods || [])].map((m: string) => m.toLowerCase());
+
+  return have.includes(want) || have.includes(`blocked-${ want }`);
+}
+
+/**
+ * Does the user have the schemas `locationConfig.ifHaveType` (and `ifHaveVerb`) require?
+ *
+ * A schema is missing when its CRD isn't installed on the cluster, or when the user may not see it.
+ * Without store getters to look the schemas up the requirement can't be met, so it isn't.
+ */
+function checkExtensionSchemaBinding(getters: any, locationConfig: LocationConfig): boolean {
+  if (!locationConfig?.ifHaveType) {
+    return true;
+  }
+
+  if (!getters) {
+    return false;
+  }
+
+  const wanted = Array.isArray(locationConfig.ifHaveType) ? locationConfig.ifHaveType : [locationConfig.ifHaveType];
+
+  return wanted.every((want) => {
+    const { store, ids } = schemasFor(getters, want);
+
+    if (!ids.length) {
+      return false;
+    }
+
+    const verb = locationConfig.ifHaveVerb;
+
+    return !verb || ids.every((id) => schemaHasVerb(getters, store, id, verb));
+  });
+}
+
 // Track which ExtensionPoint keys are missing from the extension manager's uiConfig.
 // This handles forwards-compatibility when extensions ship a newer shell that defines
 // ExtensionPoint values the running dashboard doesn't know about (e.g. 'Table' on 2.13).
@@ -202,9 +271,11 @@ export function getApplicableExtensionEnhancements<T>(
     }
 
     const actions = pluginCtx.$extension.getUIConfig(actionType, uiArea);
+    // Components pass themselves; a resource's table actions pass the root state, with the resource as context
+    const getters = pluginCtx.$store?.getters || context?.$rootGetters;
 
     actions.forEach((action: any, i: number) => {
-      if (checkExtensionRouteBinding(currRoute, action.locationConfig, context || {})) {
+      if (checkExtensionRouteBinding(currRoute, action.locationConfig, context || {}) && checkExtensionSchemaBinding(getters, action.locationConfig)) {
         // ADD CARD PLUGIN UI ENHANCEMENT
         if (actionType === ExtensionPoint.CARD) {
           // intercept to apply translation
