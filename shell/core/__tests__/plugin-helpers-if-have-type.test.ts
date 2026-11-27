@@ -29,15 +29,16 @@ const gettersWith = (schemasByStore: { [store: string]: any[] }): any => {
 
 /**
  * Run the matcher for a single registered enhancement and report whether it applied: through a
- * component (`pluginCtx.$store`), or through a resource's table actions (`context.$rootGetters`).
+ * component (`pluginCtx.$store`), or through a resource's table actions (`translationCtx.$rootGetters`).
  */
 const matches = (locationConfig: any, getters: any, via: 'component' | 'resource' | 'none' = 'component'): boolean => {
   const $extension = { getUIConfig: () => [{ name: 'x', locationConfig }] };
   const pluginCtx: any = via === 'component' ? { $extension, $store: { getters } } : { $extension };
-  const context: any = via === 'resource' ? { $rootGetters: getters } : undefined;
+  // As in resource-class.js: the root state has no store, the resource is passed to translate with
+  const translationCtx: any = via === 'resource' ? { $rootGetters: getters } : pluginCtx;
 
   return getApplicableExtensionEnhancements(
-    pluginCtx, ExtensionPoint.TAB, TabLocation.OTHER as any, route, pluginCtx, context
+    pluginCtx, ExtensionPoint.TAB, TabLocation.OTHER as any, route, translationCtx
   ).length === 1;
 };
 

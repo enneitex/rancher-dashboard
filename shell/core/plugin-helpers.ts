@@ -271,8 +271,8 @@ export function getApplicableExtensionEnhancements<T>(
     }
 
     const actions = pluginCtx.$extension.getUIConfig(actionType, uiArea);
-    // Components pass themselves; a resource's table actions pass the root state, with the resource as context
-    const getters = pluginCtx.$store?.getters || context?.$rootGetters;
+    // Components pass themselves; a resource's table actions pass the root state, and the resource to translate with
+    const getters = pluginCtx.$store?.getters || translationCtx?.$rootGetters;
 
     actions.forEach((action: any, i: number) => {
       if (checkExtensionRouteBinding(currRoute, action.locationConfig, context || {}) && checkExtensionSchemaBinding(getters, action.locationConfig)) {
