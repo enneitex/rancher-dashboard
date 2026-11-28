@@ -75,8 +75,8 @@ The admissible parameters for the `LocationConfig` object are:
 |`context`| `v2.7.2` | Object | Requirements set by the context itself. This is a key value object matched against the object provided where the feature is used. For instance if a ResourceTab should only include a tab given specific information where the ResourceTab is used. Ex `{ provider: "digitalocean" }`. In 2.16 onwards, matching is a **subset** match, applied recursively: only the keys you name have to match, and the context may carry others. See [Context matching](#context-matching) |
 | `queryParam`| `v2.7.2` | Object | This is a key value object that must match the url's query param key values |
 |`hash`| `v2.8.0` | Array | Array of strings for url hash identifiers, commonly used in Tabs Ex: On a details view of a `provisioning.cattle.io.cluster`, you have several tabs identified in the hash portion of the url such as `node-pools`, `conditions` and `related`  |
-|`ifHaveType`| `v2.16.0` | String, RegExp, Object or Array | Apply the enhancement only if the user has the schema of this type: the CRD is installed on the cluster **and** the user may see it. A type id (ex: `wgpolicyk8s.io.policyreport`), a RegExp matched against the schema ids, or `{ type, store }` to look in a store other than the current product's (ex: `{ type: 'management.cattle.io.setting', store: 'management' }`). An array requires every entry. See [Gating on a type](#gating-on-a-type) |
-|`ifHaveVerb`| `v2.16.0` | String | Used with `ifHaveType`: apply the enhancement only if every matching schema also allows this verb. Ex: `GET`, `POST`, `PUT`, `DELETE` |
+|`ifHaveType`| `v2.17.0` | String, RegExp, Object or Array | Apply the enhancement only if the user has the schema of this type: the CRD is installed on the cluster **and** the user may see it. A type id (ex: `cert-manager.io.certificate`), a RegExp matched against the schema ids, or `{ type, store }` to look in a store other than the current product's (ex: `{ type: 'management.cattle.io.setting', store: 'management' }`). An array requires every entry. See [Gating on a type](#gating-on-a-type) |
+|`ifHaveVerb`| `v2.17.0` | String | Used with `ifHaveType`: apply the enhancement only if every matching schema also allows this verb. Ex: `GET`, `POST`, `PUT`, `DELETE` |
 
 ### Context matching
 
@@ -133,7 +133,7 @@ left out of the clusters where the CRD isn't installed, or isn't readable by the
 ```ts
 plugin.addTableColumn(
   TableColumnLocation.RESOURCE,
-  { resource: ['pod'], ifHaveType: 'wgpolicyk8s.io.policyreport', ifHaveVerb: 'GET' },
+  { resource: ['secret'], ifHaveType: 'cert-manager.io.certificate', ifHaveVerb: 'GET' },
   column
 );
 ```
@@ -141,7 +141,7 @@ plugin.addTableColumn(
 They are checked together with the other `LocationConfig` params (all must match). A schema is missing both when the
 CRD isn't installed and when the user may not see it: the dashboard can't tell the two apart.
 
-> NOTE: Rancher versions before 2.16 ignore `ifHaveType` and `ifHaveVerb`, so the enhancement is then applied wherever
+> NOTE: Rancher versions before 2.17 ignore `ifHaveType` and `ifHaveVerb`, so the enhancement is then applied wherever
 > the rest of the `LocationConfig` matches. Keep a fallback for a missing type in the component itself.
 
 ### LocationConfig Examples
